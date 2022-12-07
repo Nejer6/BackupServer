@@ -4,6 +4,7 @@ import com.nejer.database.tables.Files
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
+import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -147,7 +148,8 @@ fun Application.configureRouting() {
                             .first()[Files.path] // TODO: 16.11.2022 Нет проверки на отсутствие элементов
                     }
                     call.response.header("path", path)
-                    call.respondFile(File("backups/$uniqueName"))
+                    //call.respondFile(File("backups/$uniqueName"))
+                    call.respond(LocalFileContent(File("backups/$uniqueName")))
                 }
 
                 get("paths") {
