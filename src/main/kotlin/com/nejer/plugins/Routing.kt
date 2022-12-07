@@ -24,6 +24,21 @@ fun Application.configureRouting() {
     routing {
         route("api") {
             route("v1") {
+                get {
+                    val uniqueName = call.request.queryParameters["uniqueName"]!!
+
+                    val path = transaction {
+                        Files.select { Files.name eq uniqueName }.firstOrNull()
+                    }
+
+                    if (path == null) {
+                        call.respondText("File not found", status = HttpStatusCode.NotFound)
+                        return@get
+                    }
+
+                    call.respondText(path[Files.path])
+                }
+
                 post {
                     val multipartData = call.receiveMultipart()
 
@@ -74,15 +89,31 @@ fun Application.configureRouting() {
                     val oldName = call.request.queryParameters["oldName"]!!
                     val newName = call.request.queryParameters["newName"]!!
 
-                    transaction {
-                        Files.select { Files.name eq newName }.firstOrNull() ?: run {
-                            Files.update({ Files.name eq oldName }) {
-                                it[name] = newName
-                            }
+                    val fileWithNewName = transaction {
+                        Files.select { Files.name eq newName }.firstOrNull()
+                    }
 
-                            File("backups/$oldName").renameTo(File("backups/$newName"))
+                    if (fileWithNewName != null) {
+                        call.respond(HttpStatusCode.Conflict)
+                        return@patch
+                    }
+
+                    val fileWithOldName = transaction {
+                        Files.select { Files.name eq oldName }.firstOrNull()
+                    }
+
+                    if (fileWithOldName == null) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@patch
+                    }
+
+                    transaction {
+                        Files.update({ Files.name eq oldName }) {
+                            it[name] = newName
                         }
                     }
+
+                    File("backups/${oldName}").renameTo(File("backups/$newName"))
 
                     call.respond(HttpStatusCode.OK)
                 }
@@ -92,7 +123,7 @@ fun Application.configureRouting() {
 
                     val paths = transaction {
                         Files.select { Files.name inList uniqueNames }.map {
-                            it[Files.path]
+                            it[Files.name] to it[Files.path]
                         }
                     }
 
@@ -117,21 +148,6 @@ fun Application.configureRouting() {
                     }
                     call.response.header("path", path)
                     call.respondFile(File("backups/$uniqueName"))
-                }
-
-                get {
-                    val uniqueName = call.request.queryParameters["uniqueName"]!!
-
-                    val path = transaction {
-                        Files.select { Files.name eq uniqueName }.firstOrNull()
-                    }
-
-                    if (path == null) {
-                        call.respondText("File not found", status = HttpStatusCode.NotFound)
-                        return@get
-                    }
-
-                    call.respondText(path[Files.path])
                 }
 
                 get("paths") {
