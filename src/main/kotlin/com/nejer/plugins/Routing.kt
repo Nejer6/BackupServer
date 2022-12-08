@@ -46,8 +46,8 @@ fun Application.configureRouting() {
                     multipartData.forEachPart { part ->
                         when (part) {
                             is PartData.FileItem -> {
-                                val uniqueName = part.headers["uniqueName"]!! /// TODO: 15.11.2022 избавиться от !!
-                                val path = part.headers["path"]!! // TODO: 15.11.2022 избавиться от !!
+                                val uniqueName = part.headers["uniqueName"]!!
+                                val path = part.headers["path"]!!
 
                                 transaction {
                                     val query = Files.select { Files.name eq uniqueName }
@@ -145,7 +145,7 @@ fun Application.configureRouting() {
                     val uniqueName = call.request.queryParameters["uniqueName"]!!
                     val path = transaction {
                         Files.select { Files.name eq uniqueName }
-                            .first()[Files.path] // TODO: 16.11.2022 Нет проверки на отсутствие элементов
+                            .first()[Files.path]
                     }
                     call.response.header("path", path)
                     //call.respondFile(File("backups/$uniqueName"))
